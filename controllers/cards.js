@@ -1,47 +1,78 @@
 const { default: mongoose } = require('mongoose');
 const Card = require('../models/card');
-const {
-  NotFoundError, CastError, IntervalServerError, Created,
-} = require('../errors/errors');
 
-module.exports.addCard = (req, res) => {
+const { BadRequestError } = require('../errors/BadRequestError');
+const { NotFoundError } = require('../errors/NotFoundError');
+const { ForBiddenError } = require('../errors/ForBiddenError');
+
+module.exports.addCard = (req, res, next) => {
   const { name, link } = req.body;
   Card.create({ name, link, owner: req.user._id })
     .then((card) => {
-      res.status(Created).send({ data: card });
+      res.send({ data: card });
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        res.status(CastError).send({ message: 'Переданы некорректные данные' });
+        next(new BadRequestError(err.message));
       } else {
-        res.status(IntervalServerError).send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
 
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   Card.find({})
     .populate(['owner', 'likes'])
     .then((cards) => res.send(cards))
-    .catch(() => res.status(IntervalServerError).send({ message: 'На сервере произошла ошибка' }));
+    .catch((err) => next(err));
 };
 
-module.exports.deleteCard = (req, res) => {
-  Card.findByIdAndRemove(req.params.cardId)
-    .orFail()
-    .then((card) => res.send({ message: `Карточка _id:${card._id} удалена` }))
+// module.exports.deleteCard = (req, res, next) => {
+//   Card.findByIdAndRemove(req.params.cardId)
+//     .orFail()
+//     .then((card) => res.send({ message: `Карточка _id:${card._id} удалена` }))
+//     .catch((err) => {
+//       if (err instanceof mongoose.Error.CastError) {
+//         next(new BadRequestError('Переданы некорректные данные'));
+//       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
+//         next(new NotFoundError('Карточка не найдена'));
+//       } else {
+//         next(err);
+//       }
+//     });
+// };
+
+module.exports.deleteCard = (req, res, next) => {
+  Card.findById(req.params.cardId)
+    .then((card) => {
+      if (!card.owner.equals(req.user._id)) {
+        throw new ForBiddenError('Нельзя удалить карточку другого пользователя');
+      }
+      Card.deleteOne(card)
+        .orFail()
+        .then(() => {
+          res.send({ message: `Карточка _id:${card._id} удалена` });
+        })
+        .catch((err) => {
+          if (err instanceof mongoose.Error.CastError) {
+            next(new BadRequestError('Переданы некорректные данные'));
+          } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
+            next(new NotFoundError('Карточка не найдена'));
+          } else {
+            next(err);
+          }
+        });
+    })
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        res.status(CastError).send({ message: 'Переданы некорректные данные' });
-      } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        res.status(NotFoundError).send({ message: 'Карточка не найдена' });
+      if (err.name === 'TypeError') {
+        next(new NotFoundError('Карточка не найдена'));
       } else {
-        res.status(IntervalServerError).send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
 
-module.exports.likeCard = (req, res) => {
+module.exports.likeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
     .orFail()
     .then((card) => {
@@ -49,16 +80,16 @@ module.exports.likeCard = (req, res) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
-        res.status(CastError).send({ message: 'Переданы некорректные данные' });
+        next(new BadRequestError('Переданы некорректные данные'));
       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        res.status(NotFoundError).send({ message: 'Карточка не найдена' });
+        next(new NotFoundError('Карточка не найдена'));
       } else {
-        res.status(IntervalServerError).send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
 
-module.exports.dislikeCard = (req, res) => {
+module.exports.dislikeCard = (req, res, next) => {
   Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
     .orFail()
     .then((card) => {
@@ -66,11 +97,11 @@ module.exports.dislikeCard = (req, res) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
-        res.status(CastError).send({ message: 'Переданы некорректные данные' });
+        next(new BadRequestError('Переданы некорректные данные'));
       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        res.status(NotFoundError).send({ message: 'Карточка не найдена' });
+        next(new NotFoundError('Карточка не найдена'));
       } else {
-        res.status(IntervalServerError).send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
