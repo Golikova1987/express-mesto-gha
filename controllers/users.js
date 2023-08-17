@@ -5,7 +5,6 @@ const User = require('../models/user');
 
 const { BadRequestError } = require('../errors/BadRequestError');
 const { NotFoundError } = require('../errors/NotFoundError');
-// const { UnAuthorizedError } = require('../errors/UnAuthorizedError');
 const { ConflictError } = require('../errors/ConflictError');
 
 module.exports.getUsers = (req, res, next) => {
@@ -94,7 +93,6 @@ module.exports.login = (req, res, next) => {
       res.send({ token });
     })
     .catch((err) => {
-      // next(new UnAuthorizedError(err.message));
       next(err);
     });
 };

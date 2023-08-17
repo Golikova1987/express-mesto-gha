@@ -25,15 +25,6 @@ mongoose.connect(DB_URL, {
   useUnifiedTopology: true,
 });
 
-// app.use((req, res, next) => {
-//   req.user = {
-//     _id: '64cdea81b86abb95f35f19d3',
-//   };
-//   next();
-// });
-
-// app.use('/users', require('./routes/users'));
-// app.use('/cards', require('./routes/cards'));
 app.use('/', require('./routes/index'));
 
 app.use('*', (req, res) => {
@@ -44,7 +35,6 @@ app.use(errors());
 
 app.use((err, req, res, next) => {
   const { statusCode = 500, message } = err;
-
   res.status(statusCode).send({
     message: statusCode === 500
       ? 'На сервере произошла ошибка'
