@@ -27,21 +27,6 @@ module.exports.getCards = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-// module.exports.deleteCard = (req, res, next) => {
-//   Card.findByIdAndRemove(req.params.cardId)
-//     .orFail()
-//     .then((card) => res.send({ message: `Карточка _id:${card._id} удалена` }))
-//     .catch((err) => {
-//       if (err instanceof mongoose.Error.CastError) {
-//         next(new BadRequestError('Переданы некорректные данные'));
-//       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
-//         next(new NotFoundError('Карточка не найдена'));
-//       } else {
-//         next(err);
-//       }
-//     });
-// };
-
 module.exports.deleteCard = (req, res, next) => {
   Card.findById(req.params.cardId)
     .then((card) => {
